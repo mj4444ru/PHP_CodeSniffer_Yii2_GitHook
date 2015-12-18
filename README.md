@@ -1,0 +1,1 @@
+# PHP_CodeSniffer_Yii2_GitHook
