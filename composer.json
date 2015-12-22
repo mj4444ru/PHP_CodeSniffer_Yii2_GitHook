@@ -1,0 +1,17 @@
+{
+    "name": "mj4444/php_codesniffer_yii2_githook",
+    "description": "",
+    "type": "git-hooks",
+    "keywords": [
+        "php_codesniffer",
+        "phpcs",
+        "standards",
+        "git",
+        "hooks"
+    ],
+    "require": {
+        "squizlabs/php_codesniffer": "*",
+        "yiisoft/yii2-coding-standards": "*"
+    },
+    "bin": ["codesniffer_git_install.sh"]
+}
