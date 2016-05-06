@@ -7,7 +7,7 @@ Installation
 
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).
 
-    php composer.phar require --dev mj4444/yii2-gii:dev-master
+    php composer.phar require --dev mj4444/php_codesniffer_yii2_githook:dev-master
 
 Usage
 -----
