@@ -7,6 +7,7 @@ PROGRESS=
 COLORS=Y
 
 PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
+VENDOR="$PROJECT/vendor";
 
 if [ "$IGNORE_WARNINGS" != "" ]
 then
@@ -24,14 +25,14 @@ fi
 
 if [ "$COLORS" != "" ]
 then
-  COLORS="--colors"
+  COLORS="--runtime-set colors 1"
 else
-  COLORS="--no-colors"
+  COLORS="--runtime-set colors 0"
 fi
 
 if [ "$STANDARD" = "Yii2" ]
 then
-  STANDARD="$PROJECT/vendor/yiisoft/yii2-coding-standards/Yii2"
+  STANDARD="$VENDOR/yiisoft/yii2-coding-standards/Yii2"
 fi
 
 # JS files
@@ -57,7 +58,7 @@ done
 if [ "$FILES" != "" ]
 then
   echo "Running Code Sniffer for JS..."
-  $PROJECT/vendor/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS $FILES
+  $VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS $FILES
   if [ $? != 0 ]
   then
     echo "Fix the error before commit."
@@ -95,7 +96,7 @@ done
 if [ "$FILES" != "" ]
 then
   echo "Running Code Sniffer for PHP..."
-  $PROJECT/vendor/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS $FILES
+  $VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS $FILES
   if [ $? != 0 ]
   then
     echo "Fix the error before commit."
