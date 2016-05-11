@@ -37,7 +37,7 @@ fi
 
 # JS files
 
-STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.js`
+STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.js$`
 
 # Determine if a file list is passed
 if [ "$#" -eq 1 ]
@@ -68,7 +68,7 @@ fi
 
 # PHP files
 
-STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.php`
+STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep -E "\\\\.(php|phtml)$"`
 
 # Determine if a file list is passed
 if [ "$#" -eq 1 ]
