@@ -2,12 +2,16 @@
 
 STANDARD="Yii2"
 ENCODING="utf-8"
-IGNORE_WARNINGS=
+IGNORE_WARNINGS=Y
 PROGRESS=
 COLORS=Y
 
 PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
 VENDOR="$PROJECT/vendor";
+
+if [ -f "$PROJECT/.phpcsgit" ]; then
+    . $PROJECT/.phpcsgit
+fi
 
 if [ "$IGNORE_WARNINGS" != "" ]
 then
@@ -33,6 +37,10 @@ fi
 if [ "$STANDARD" = "Yii2" ]
 then
   STANDARD="$VENDOR/yiisoft/yii2-coding-standards/Yii2"
+fi
+if [ "$STANDARD" = "Yii2Ext" ]
+then
+  STANDARD="$VENDOR/mj4444/php_codesniffer_yii2_githook/Yii2Ext"
 fi
 
 # JS files

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="Yii2Ext">
+	<description>Yii 2 Web Application Framework Coding Standard Extend</description>
+	<rule ref="../../../yiisoft/yii2-coding-standards/Yii2"/>
+	<rule ref="Yii2.Properties.PrivatePropertiesUnderscore">
+			<type>warning</type>
+	</rule>
+</ruleset>

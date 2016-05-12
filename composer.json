@@ -13,5 +13,8 @@
         "squizlabs/php_codesniffer": "*",
         "yiisoft/yii2-coding-standards": "*"
     },
-    "bin": ["codesniffer_git_install.sh"]
+    "bin": [
+        "codesniffer_git_install",
+        "codesniffer"
+    ]
 }

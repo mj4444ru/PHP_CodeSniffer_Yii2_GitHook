@@ -1,0 +1,77 @@
+#!/bin/sh
+
+STANDARD="Yii2"
+ENCODING="utf-8"
+COLORS=Y
+
+ABSOLUTE_FILENAME=`readlink -e "$0"`
+SOURCE_PATH=`dirname "$ABSOLUTE_FILENAME"`
+VENDOR_PATH="$SOURCE_PATH";
+VENDOR_PATH=`dirname "$VENDOR_PATH"`
+VENDOR_PATH=`dirname "$VENDOR_PATH"`
+
+PROJECT_PATH=`dirname "$VENDOR_PATH"`;
+if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
+    PROJECT_PATH=`dirname "$PROJECT_PATH"`;
+    if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
+        PROJECT_PATH=`dirname "$PROJECT_PATH"`;
+        if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
+            PROJECT_PATH=`dirname "$PROJECT_PATH"`;
+            if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
+                PROJECT_PATH=`dirname "$PROJECT_PATH"`;
+                if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
+                    echo "Unable find project root!"
+                    exit 1
+                fi
+            fi
+        fi
+    fi
+fi
+
+PROJECT="$PROJECT_PATH"
+VENDOR="$VENDOR_PATH"
+
+if [ -f "$PROJECT/.phpcsgit" ]; then
+    . $PROJECT/.phpcsgit
+fi
+
+IGNORE_WARNINGS=""
+PROGRESS="-p"
+
+if [ "$COLORS" != "" ]
+then
+  COLORS="--runtime-set colors 1"
+else
+  COLORS="--runtime-set colors 0"
+fi
+
+if [ "$STANDARD" = "Yii2" ]
+then
+  STANDARD="$VENDOR/yiisoft/yii2-coding-standards/Yii2"
+fi
+if [ "$STANDARD" = "Yii2Ext" ]
+then
+  STANDARD="$VENDOR/mj4444/php_codesniffer_yii2_githook/Yii2Ext"
+fi
+
+# JS files
+
+echo "Running Code Sniffer..."
+$VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS --extensions=js,php,phtml $@
+if [ $? != 0 ]
+then
+  echo "Fix the error before commit."
+  exit 1
+fi
+
+# PHP files
+
+#echo "Running Code Sniffer for PHP..."
+#$VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS --extensions=php,phtml $1
+#if [ $? != 0 ]
+#then
+#  echo "Fix the error before commit."
+#  exit 1
+#fi
+
+exit $?

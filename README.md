@@ -12,7 +12,7 @@ The preferred way to install this extension is through [composer](http://getcomp
 Usage
 -----
 
-Execute script `vendor/bin/codesniffer_git_install.sh` for install git hooks.
+Execute script `vendor/bin/codesniffer_git_install` for install git hooks.
 
 Links
 -----
