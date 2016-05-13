@@ -5,12 +5,14 @@ ENCODING="utf-8"
 IGNORE_WARNINGS=Y
 PROGRESS=
 COLORS=Y
+TMP_STAGING=".tmp_staging"
 
 PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
 VENDOR="$PROJECT/vendor";
 
-if [ -f "$PROJECT/.phpcsgit" ]; then
-    . $PROJECT/.phpcsgit
+if [ -f "$PROJECT/.phpcsgit" ]
+then
+  . $PROJECT/.phpcsgit
 fi
 
 if [ "$IGNORE_WARNINGS" != "" ]
@@ -43,24 +45,23 @@ then
   STANDARD="$VENDOR/mj4444/php_codesniffer_yii2_githook/Yii2Ext"
 fi
 
+if [ -e $TMP_STAGING ]
+then
+  rm -rf $TMP_STAGING
+fi
+mkdir $TMP_STAGING
+
 # JS files
 
 STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.js$`
 
-# Determine if a file list is passed
-if [ "$#" -eq 1 ]
-then
-  oIFS=$IFS
-  IFS='
-  '
-  SFILES="$1"
-  IFS=$oIFS
-fi
-SFILES=${SFILES:-$STAGED_FILES_CMD}
-
-for FILE in $SFILES
+FILES=
+for FILE in $STAGED_FILES_CMD
 do
-  FILES="$FILES $PROJECT/$FILE"
+  ID=$(git diff-index --cached HEAD $FILE | cut -d " " -f4)
+  mkdir -p "$TMP_STAGING/$(dirname $FILE)"
+  git cat-file blob $ID > "$TMP_STAGING/$FILE"
+  FILES="$FILES $TMP_STAGING/$FILE"
 done
 
 if [ "$FILES" != "" ]
@@ -70,35 +71,29 @@ then
   if [ $? != 0 ]
   then
     echo "Fix the error before commit."
+    rm -rf $TMP_STAGING
     exit 1
   fi
 fi
-
 # PHP files
 
 STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep -E "\\\\.(php|phtml)$"`
 
-# Determine if a file list is passed
-if [ "$#" -eq 1 ]
-then
-  oIFS=$IFS
-  IFS='
-  '
-  SFILES="$1"
-  IFS=$oIFS
-fi
-SFILES=${SFILES:-$STAGED_FILES_CMD}
-
 echo "Checking PHP Lint..."
-for FILE in $SFILES
+FILES=
+for FILE in $STAGED_FILES_CMD
 do
-  php -l -d display_errors=0 $PROJECT/$FILE
+  ID=$(git diff-index --cached HEAD $FILE | cut -d " " -f4)
+  mkdir -p "$TMP_STAGING/$(dirname $FILE)"
+  git cat-file blob $ID > "$TMP_STAGING/$FILE"
+  php -l -d display_errors=0 $TMP_STAGING/$FILE
   if [ $? != 0 ]
   then
     echo "Fix the error before commit."
+    rm -rf $TMP_STAGING
     exit 1
   fi
-  FILES="$FILES $PROJECT/$FILE"
+  FILES="$FILES $TMP_STAGING/$FILE"
 done
 
 if [ "$FILES" != "" ]
@@ -108,8 +103,10 @@ then
   if [ $? != 0 ]
   then
     echo "Fix the error before commit."
+    rm -rf $TMP_STAGING
     exit 1
   fi
 fi
 
+rm -rf $TMP_STAGING
 exit $?
