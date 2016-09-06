@@ -7,7 +7,11 @@ PROGRESS=
 COLORS=Y
 TMP_STAGING=".tmp_staging"
 
-PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
+# PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
+PROJECT=`readlink -e "$0"`
+PROJECT=`dirname "$PROJECT"`
+PROJECT=`dirname "$PROJECT"`
+PROJECT=`dirname "$PROJECT"`
 VENDOR="$PROJECT/vendor";
 
 if [ -f "$PROJECT/.phpcsgit" ]
@@ -75,6 +79,7 @@ then
     exit 1
   fi
 fi
+
 # PHP files
 
 STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep -E "\\\\.(php|phtml)$"`

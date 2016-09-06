@@ -10,7 +10,7 @@
         "hooks"
     ],
     "require": {
-        "squizlabs/php_codesniffer": "*",
+        "squizlabs/php_codesniffer": "2.*",
         "yiisoft/yii2-coding-standards": "*"
     },
     "bin": [

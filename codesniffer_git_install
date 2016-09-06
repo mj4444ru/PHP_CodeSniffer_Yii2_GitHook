@@ -1,21 +1,21 @@
 #!/bin/sh
 
-ABSOLUTE_FILENAME=`readlink -e "$0"`
-SOURCE_PATH=`dirname "$ABSOLUTE_FILENAME"`
-VENDOR_PATH="$SOURCE_PATH";
-VENDOR_PATH=`dirname "$VENDOR_PATH"`
-VENDOR_PATH=`dirname "$VENDOR_PATH"`
+VENDOR=`readlink -e "$0"`
+VENDOR=`dirname "$VENDOR"`
+SOURCE="$VENDOR"
+VENDOR=`dirname "$VENDOR"`
+VENDOR=`dirname "$VENDOR"`
 
-PROJECT_PATH=`dirname "$VENDOR_PATH"`;
-if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
-    PROJECT_PATH=`dirname "$PROJECT_PATH"`;
-    if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
-        PROJECT_PATH=`dirname "$PROJECT_PATH"`;
-        if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
-            PROJECT_PATH=`dirname "$PROJECT_PATH"`;
-            if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
-                PROJECT_PATH=`dirname "$PROJECT_PATH"`;
-                if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
+PROJECT=`dirname "$VENDOR"`;
+if [ ! -d "$PROJECT/.git/hooks/" ]; then
+    PROJECT=`dirname "$PROJECT"`;
+    if [ ! -d "$PROJECT/.git/hooks/" ]; then
+        PROJECT=`dirname "$PROJECT"`;
+        if [ ! -d "$PROJECT/.git/hooks/" ]; then
+            PROJECT=`dirname "$PROJECT"`;
+            if [ ! -d "$PROJECT/.git/hooks/" ]; then
+                PROJECT=`dirname "$PROJECT"`;
+                if [ ! -d "$PROJECT/.git/hooks/" ]; then
                     echo "Unable to install hook: Git folder not found!"
                     exit 1
                 fi
@@ -23,8 +23,9 @@ if [ ! -d "$PROJECT_PATH/.git/hooks/" ]; then
         fi
     fi
 fi
-HOOKS_PATH="$PROJECT_PATH/.git/hooks"
-SHORT_VENDOR_PATH="${VENDOR_PATH#$PROJECT_PATH}"
+
+HOOKS_PATH="$PROJECT/.git/hooks"
+SHORT_VENDOR="${VENDOR#$PROJECT}"
 
 echo "Install hook in \"$HOOKS_PATH\""
 if [ -e "$HOOKS_PATH/pre-commit" ]; then
@@ -41,12 +42,12 @@ if [ -e "$HOOKS_PATH/pre-commit" ]; then
     fi
 fi
 
-echo "Copy hook from \"$SOURCE_PATH/hooks/pre-commit\" to \"$HOOKS_PATH/pre-commit\"";
-cp $SOURCE_PATH/hooks/pre-commit $HOOKS_PATH/pre-commit
+echo "Copy hook from \"$SOURCE/hooks/pre-commit\" to \"$HOOKS_PATH/pre-commit\"";
+cp $SOURCE/hooks/pre-commit $HOOKS_PATH/pre-commit
 chmod +x ${HOOKS_PATH}/pre-commit
-sed 's~VENDOR="$PROJECT[^"]*"~VENDOR="$PROJECT'$SHORT_VENDOR_PATH'"~' -i $HOOKS_PATH/pre-commit
+sed 's~VENDOR="$PROJECT[^"]*"~VENDOR="$PROJECT'$SHORT_VENDOR'"~' -i $HOOKS_PATH/pre-commit
 
-if [ ! -f "$PROJECT_PATH/.phpcsgit" ]; then
-    echo "Copy config from \"$SOURCE_PATH/.phpcsgit\" to \"$PROJECT_PATH/.phpcsgit\"";
-    cp $SOURCE_PATH/.phpcsgit $PROJECT_PATH/.phpcsgit
+if [ ! -f "$PROJECT/.phpcsgit" ]; then
+    echo "Copy config from \"$SOURCE/.phpcsgit\" to \"$PROJECT/.phpcsgit\"";
+    cp $SOURCE/.phpcsgit $PROJECT/.phpcsgit
 fi
