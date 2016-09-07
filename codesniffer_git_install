@@ -25,7 +25,9 @@ if [ ! -d "$PROJECT/.git/hooks/" ]; then
 fi
 
 HOOKS_PATH="$PROJECT/.git/hooks"
+INFO_PATH="$PROJECT/.git/info"
 SHORT_VENDOR="${VENDOR#$PROJECT}"
+SHORT_SOURCE="${SOURCE#$PROJECT/}"
 
 echo "Install hook in \"$HOOKS_PATH\""
 if [ -e "$HOOKS_PATH/pre-commit" ]; then
@@ -50,4 +52,21 @@ sed 's~VENDOR="$PROJECT[^"]*"~VENDOR="$PROJECT'$SHORT_VENDOR'"~' -i $HOOKS_PATH/
 if [ ! -f "$PROJECT/.phpcsgit" ]; then
     echo "Copy config from \"$SOURCE/.phpcsgit\" to \"$PROJECT/.phpcsgit\"";
     cp $SOURCE/.phpcsgit $PROJECT/.phpcsgit
+fi
+
+
+echo "Install git filter \"phpcbf\" for \"php, phtml, js\" files";
+git config filter.phpcbf.required true
+git config filter.phpcbf.clean "$SHORT_SOURCE/codesniffer_git_filter_clean %f"
+if [ ! -f "$INFO_PATH/attributes" ]; then
+    touch "$INFO_PATH/attributes"
+fi
+if ! grep -q "*.php filter=phpcbf" "$INFO_PATH/attributes"; then
+    echo "*.php filter=phpcbf" >> "$INFO_PATH/attributes"
+fi
+if ! grep -q "*.phtml filter=phpcbf" "$INFO_PATH/attributes"; then
+    echo "*.phtml filter=phpcbf" >> "$INFO_PATH/attributes"
+fi
+if ! grep -q "*.js filter=phpcbf" "$INFO_PATH/attributes"; then
+    echo "*.js filter=phpcbf" >> "$INFO_PATH/attributes"
 fi
