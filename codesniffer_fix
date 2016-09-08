@@ -50,7 +50,7 @@ if [ "$STANDARD" = "PSR2Ext" ]; then
   STANDARD="$VENDOR/mj4444/php_codesniffer_yii2_githook/PSR2Ext"
 fi
 
-echo "Running Code Sniffer..."
-$VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS --extensions=js,php,phtml $@
+echo "Running Code Sniffer Fixer..."
+$VENDOR/bin/phpcbf --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS --extensions=js,php,phtml $@
 
 exit 0

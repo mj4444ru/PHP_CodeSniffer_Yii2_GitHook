@@ -58,7 +58,7 @@ fi
 cat > "$PROJECT/.git/addfile.orig.tmp"
 cp "$PROJECT/.git/addfile.orig.tmp" "$PROJECT/.git/addfile.patched.tmp"
 
-$VENDOR/bin/phpcbf --standard=$STANDARD --encoding=$ENCODING $IGNORE_WARNINGS "$PROJECT/.git/addfile.patched.tmp" > "$PROJECT/.git/addfile.result.tmp"
+$VENDOR/bin/phpcbf --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS "$PROJECT/.git/addfile.patched.tmp" > "$PROJECT/.git/addfile.result.tmp"
 PATHCODEEXIT=$?
 
 $VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS < "$PROJECT/.git/addfile.patched.tmp" >&2

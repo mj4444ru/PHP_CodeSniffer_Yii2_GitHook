@@ -14,7 +14,8 @@
         "yiisoft/yii2-coding-standards": "*"
     },
     "bin": [
-        "codesniffer_git_install",
-        "codesniffer"
+        "codesniffer",
+        "codesniffer_fix",
+        "codesniffer_git_install"
     ]
 }
