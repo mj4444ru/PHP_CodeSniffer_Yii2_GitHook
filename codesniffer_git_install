@@ -52,6 +52,11 @@ sed 's~VENDOR="$PROJECT[^"]*"~VENDOR="$PROJECT'$SHORT_VENDOR'"~' -i $HOOKS_PATH/
 if [ ! -f "$PROJECT/.phpcsgit" ]; then
     echo "Copy config from \"$SOURCE/.phpcsgit\" to \"$PROJECT/.phpcsgit\"";
     cp $SOURCE/.phpcsgit $PROJECT/.phpcsgit
+else
+    sed -i "s/# STANDARD - Yii2Ext, Yii2, PSR2.../# STANDARD - Yii2Ext, Yii2, PSR2Ext, PSR2.../" "$PROJECT/.phpcsgit" > "$PROJECT/.phpcsgit-"
+    if ! grep -q "FILTER_NO_ABORT=" "$PROJECT/.phpcsgit"; then
+        echo "FILTER_NO_ABORT=" >> "$PROJECT/.phpcsgit"
+    fi
 fi
 
 
