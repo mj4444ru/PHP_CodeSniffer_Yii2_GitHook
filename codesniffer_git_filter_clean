@@ -1,5 +1,11 @@
 #!/bin/sh
 
+PPPID=`ps -p $PPID -o ppid -h`
+if ! ps -p $PPPID -o command -h | grep -q "^ *git\( .*\)\? add "; then
+    cat
+    exit 0
+fi
+
 STANDARD="Yii2"
 ENCODING="utf-8"
 IGNORE_WARNINGS=Y
