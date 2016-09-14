@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ruleset name="PSR2Ext">
 	<rule ref="PSR2" />
+	<!--
 	<rule ref="Generic.WhiteSpace.ScopeIndent">
 		<properties>
 			<property name="exact" value="true" />
 		</properties>
 	</rule>
+	-->
 	<rule ref="PSR2Ext.Namespaces.NamespaceDeclaration" />
 	<rule ref="Squiz.WhiteSpace.FunctionOpeningBraceSpace" />
 </ruleset>
