@@ -21,21 +21,36 @@ fi
 
 if [ "$IGNORE_WARNINGS" != "" ]
 then
-  IGNORE_WARNINGS="-n"
+  if [ "$IGNORE_WARNINGS" != "N" ]
+  then
+    IGNORE_WARNINGS="-n"
+  else
+    IGNORE_WARNINGS=""
+fi
 else
   IGNORE_WARNINGS=""
 fi
 
 if [ "$PROGRESS" != "" ]
 then
-  PROGRESS="-p"
+  if [ "$PROGRESS" != "N" ]
+  then
+    PROGRESS="-p"
+  else
+    PROGRESS=""
+  fi
 else
   PROGRESS=""
 fi
 
 if [ "$COLORS" != "" ]
 then
-  COLORS="--runtime-set colors 1"
+  if [ "$COLORS" != "N" ]
+  then
+    COLORS="--runtime-set colors 1"
+  else
+    COLORS="--runtime-set colors 0"
+  fi
 else
   COLORS="--runtime-set colors 0"
 fi

@@ -1,56 +1,15 @@
-#!/bin/sh
+#!/usr/bin/env php
+<?php
 
-STANDARD="Yii2"
-ENCODING="utf-8"
-COLORS=Y
+require 'utils.php';
 
-VENDOR=`readlink -e "$0"`
-VENDOR=`dirname "$VENDOR"`
-VENDOR=`dirname "$VENDOR"`
-VENDOR=`dirname "$VENDOR"`
+PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
+PHP_CodeSniffer_Yii2_GitHook\Utils::replaceArgv("standard encoding colors ignore_warnings progress extensions *");
+$vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
 
-PROJECT=`dirname "$VENDOR"`;
-if [ ! -d "$PROJECT/.git/hooks/" ]; then
-    PROJECT=`dirname "$PROJECT"`;
-    if [ ! -d "$PROJECT/.git/hooks/" ]; then
-        PROJECT=`dirname "$PROJECT"`;
-        if [ ! -d "$PROJECT/.git/hooks/" ]; then
-            PROJECT=`dirname "$PROJECT"`;
-            if [ ! -d "$PROJECT/.git/hooks/" ]; then
-                PROJECT=`dirname "$PROJECT"`;
-                if [ ! -d "$PROJECT/.git/hooks/" ]; then
-                    echo "Unable find project root!"
-                    exit 1
-                fi
-            fi
-        fi
-    fi
-fi
+echo "Running Code Fixer...";
 
-if [ -f "$PROJECT/.phpcsgit" ]; then
-    . $PROJECT/.phpcsgit
-fi
+require "{$vendorDir}/squizlabs/php_codesniffer/CodeSniffer/CLI.php";
 
-IGNORE_WARNINGS=""
-PROGRESS="-p"
-
-if [ "$COLORS" != "" ]; then
-  COLORS="--runtime-set colors 1"
-else
-  COLORS="--runtime-set colors 0"
-fi
-
-if [ "$STANDARD" = "Yii2" ]; then
-  STANDARD="$VENDOR/yiisoft/yii2-coding-standards/Yii2"
-fi
-if [ "$STANDARD" = "Yii2Ext" ]; then
-  STANDARD="$VENDOR/mj4444/php_codesniffer_yii2_githook/Yii2Ext"
-fi
-if [ "$STANDARD" = "PSR2Ext" ]; then
-  STANDARD="$VENDOR/mj4444/php_codesniffer_yii2_githook/PSR2Ext"
-fi
-
-echo "Running Code Sniffer Fixer..."
-$VENDOR/bin/phpcbf --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS --extensions=js,php,phtml $@
-
-exit 0
+$cli = new PHP_CodeSniffer_CLI();
+$cli->runphpcbf();

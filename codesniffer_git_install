@@ -1,77 +1,88 @@
-#!/bin/sh
+#!/usr/bin/env php
+<?php
 
-VENDOR=`readlink -e "$0"`
-VENDOR=`dirname "$VENDOR"`
-SOURCE="$VENDOR"
-VENDOR=`dirname "$VENDOR"`
-VENDOR=`dirname "$VENDOR"`
+require 'utils.php';
 
-PROJECT=`dirname "$VENDOR"`;
-if [ ! -d "$PROJECT/.git/hooks/" ]; then
-    PROJECT=`dirname "$PROJECT"`;
-    if [ ! -d "$PROJECT/.git/hooks/" ]; then
-        PROJECT=`dirname "$PROJECT"`;
-        if [ ! -d "$PROJECT/.git/hooks/" ]; then
-            PROJECT=`dirname "$PROJECT"`;
-            if [ ! -d "$PROJECT/.git/hooks/" ]; then
-                PROJECT=`dirname "$PROJECT"`;
-                if [ ! -d "$PROJECT/.git/hooks/" ]; then
-                    echo "Unable to install hook: Git folder not found!"
-                    exit 1
-                fi
-            fi
-        fi
-    fi
-fi
+$sourceDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getSelfDir();
+$vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
+$gitProjectDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getGitProjectDir();
+if (!$gitProjectDir) {
+    echo "Unable to install hook: Git folder not found!\n\n";
+    exit(1);
+}
+$shortVendorDir = substr($vendorDir, strlen($gitProjectDir));
+$shortSourceDir = substr($sourceDir, strlen($gitProjectDir) + 1);
+$ds = DIRECTORY_SEPARATOR;
+$hooksDir = "{$gitProjectDir}{$ds}.git{$ds}hooks";
+$infoDir = "{$gitProjectDir}{$ds}.git{$ds}info";
 
-HOOKS_PATH="$PROJECT/.git/hooks"
-INFO_PATH="$PROJECT/.git/info"
-SHORT_VENDOR="${VENDOR#$PROJECT}"
-SHORT_SOURCE="${SOURCE#$PROJECT/}"
+PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
 
-echo "Install hook in \"$HOOKS_PATH\""
-if [ -e "$HOOKS_PATH/pre-commit" ]; then
-    if [ -f "$HOOKS_PATH/pre-commit" ]; then
-        echo "Remove file \"$HOOKS_PATH/pre-commit\""
-        rm -f $HOOKS_PATH/pre-commit
-        if [ -e "$HOOKS_PATH/pre-commit" ]; then
-            echo "Unable to install hook: \"$HOOKS_PATH/pre-commit\" is readonly!";
-            exit 1
-        fi
-    else
-        echo "Unable to install hook: \"$HOOKS_PATH/pre-commit\" is not file!";
-        exit 1
-    fi
-fi
+echo "Install hook in \"{$hooksDir}\"\n";
 
-echo "Copy hook from \"$SOURCE/hooks/pre-commit\" to \"$HOOKS_PATH/pre-commit\"";
-cp $SOURCE/hooks/pre-commit $HOOKS_PATH/pre-commit
-chmod +x ${HOOKS_PATH}/pre-commit
-sed 's~VENDOR="$PROJECT[^"]*"~VENDOR="$PROJECT'$SHORT_VENDOR'"~' -i $HOOKS_PATH/pre-commit
+$hookFileName = "{$hooksDir}{$ds}pre-commit";
+$hookSourceFileName = "{$sourceDir}{$ds}hooks{$ds}pre-commit";
 
-if [ ! -f "$PROJECT/.phpcsgit" ]; then
-    echo "Copy config from \"$SOURCE/.phpcsgit\" to \"$PROJECT/.phpcsgit\"";
-    cp $SOURCE/.phpcsgit $PROJECT/.phpcsgit
-else
-    sed -i "s/# STANDARD - Yii2Ext, Yii2, PSR2.../# STANDARD - Yii2Ext, Yii2, PSR2Ext, PSR2.../" "$PROJECT/.phpcsgit" > "$PROJECT/.phpcsgit-"
-    if ! grep -q "FILTER_NO_ABORT=" "$PROJECT/.phpcsgit"; then
-        echo "FILTER_NO_ABORT=" >> "$PROJECT/.phpcsgit"
-    fi
-fi
+if (file_exists($hookFileName)) {
+    echo "Remove file \"{$hookFileName}\"\n";
+    if (!is_writable($hookFileName)) {
+        echo "Unable to install hook: \"{$hookFileName}\" is readonly!\n\n";
+        exit(2);
+    }
+    if (!is_file($hookFileName) && is_link($hookFileName)) {
+        echo "Unable to install hook: \"{$hookFileName}\" is not file!\n\n";
+        exit(2);
+    }
+    if (!@unlink($hookFileName)) {
+        echo "Unable to install hook: Cannot delete file \"{$hookFileName}\"!\n\n";
+        exit(2);
+    }
+}
+echo "Copy hook from \"{$hookSourceFileName}\" to \"{$hookFileName}\"\n";
+if (!@copy($hookSourceFileName, $hookFileName)) {
+    echo "Unable to install hook: Cannot copy hook file!\n\n";
+    exit(2);
+}
+@chmod($hookFileName, 0775);
 
+$shortVendorDirS = addslashes($shortVendorDir);
+$shortSourceDirS = addslashes($shortSourceDir);
+if ($shortVendorDirS != '/vendor') {
+    PHP_CodeSniffer_Yii2_GitHook\Utils::fileStrReplace($hookFileName, '$PROJECT/vendor', "\$PROJECT{$shortVendorDirS}");
+}
 
-echo "Install git filter \"phpcbf\" for \"php, phtml, js\" files";
-git config filter.phpcbf.required true
-git config filter.phpcbf.clean "$SHORT_SOURCE/codesniffer_git_filter_clean %f"
-if [ ! -f "$INFO_PATH/attributes" ]; then
-    touch "$INFO_PATH/attributes"
-fi
-if ! grep -q "*.php filter=phpcbf" "$INFO_PATH/attributes"; then
-    echo "*.php filter=phpcbf" >> "$INFO_PATH/attributes"
-fi
-if ! grep -q "*.phtml filter=phpcbf" "$INFO_PATH/attributes"; then
-    echo "*.phtml filter=phpcbf" >> "$INFO_PATH/attributes"
-fi
-if ! grep -q "*.js filter=phpcbf" "$INFO_PATH/attributes"; then
-    echo "*.js filter=phpcbf" >> "$INFO_PATH/attributes"
-fi
+$extensions = PHP_CodeSniffer_Yii2_GitHook\Utils::getExtensions();
+$extensionsS = addslashes($extensions);
+echo "Install git filter \"phpcbf\" for \"{$extensionsS}\" files\n";
+
+passthru("git config filter.phpcbf.required true");
+passthru("git config filter.phpcbf.clean \"{$shortSourceDirS}{$ds}codesniffer_git_filter_clean %f\"");
+$extensions = explode(',', $extensions);
+$extensionsAttrList = array();
+foreach ($extensions as $ext) {
+    $extensionsAttrList["*.{$ext} filter=phpcbf"] = true;
+}
+$attributesFile = @file("{$infoDir}/attributes");
+if (is_array($attributesFile)) {
+    foreach ($attributesFile as $i => $attributesFileLine) {
+        $line = rtrim($attributesFileLine);
+        if ($attributesFileLine == $line) {
+            $attributesFile[$i] = "{$attributesFileLine}\n";
+        }
+        if (substr($line, -14) == ' filter=phpcbf') {
+            if (array_key_exists($line, $extensionsAttrList)) {
+                unset($extensionsAttrList[$line]);
+            } else {
+                unset($attributesFile[$i]);
+            }
+        }
+    }
+} else {
+    $attributesFile = array();
+}
+foreach ($extensionsAttrList as $line => $v) {
+    $attributesFile[] = "{$line}\n";
+}
+@file_put_contents("{$infoDir}/attributes", implode('', $attributesFile));
+
+exit(0);

@@ -40,13 +40,21 @@ if [ -f "$PROJECT/.phpcsgit" ]; then
 fi
 
 if [ "$IGNORE_WARNINGS" != "" ]; then
-  IGNORE_WARNINGS="-n"
+  if [ "$IGNORE_WARNINGS" != "N" ]; then
+    IGNORE_WARNINGS="-n"
+  else
+    IGNORE_WARNINGS=""
+  fi
 else
   IGNORE_WARNINGS=""
 fi
 
 if [ "$COLORS" != "" ]; then
-  COLORS="--runtime-set colors 1"
+  if [ "$COLORS" != "N" ]; then
+    COLORS="--runtime-set colors 1"
+  else
+    COLORS="--runtime-set colors 0"
+  fi
 else
   COLORS="--runtime-set colors 0"
 fi
@@ -70,8 +78,10 @@ PATHCODEEXIT=$?
 $VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS < "$PROJECT/.git/addfile.patched.tmp" >&2
 if [ $? != 0 ]; then
   if [ "$FILTER_NO_ABORT" != "" ]; then
-    cat < "$PROJECT/.git/addfile.patched.tmp"
-    exit 0
+    if [ "$FILTER_NO_ABORT" != "N" ]; then
+      cat < "$PROJECT/.git/addfile.patched.tmp"
+      exit 0
+    fi
   fi
   cat < "$PROJECT/.git/addfile.orig.tmp"
   exit 1
