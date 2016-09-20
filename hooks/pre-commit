@@ -1,132 +1,73 @@
-#!/bin/sh
+#!/usr/bin/env php
+<?php
 
-STANDARD="Yii2"
-ENCODING="utf-8"
-IGNORE_WARNINGS=Y
-PROGRESS=
-COLORS=Y
-TMP_STAGING=".tmp_staging"
+$root = dirname(__DIR__);
+require  "{$root}/utils.php";
 
-# PROJECT=`php -r "echo dirname(dirname(dirname(realpath('$0'))));"`
-PROJECT=`readlink -e "$0"`
-PROJECT=`dirname "$PROJECT"`
-PROJECT=`dirname "$PROJECT"`
-PROJECT=`dirname "$PROJECT"`
-VENDOR="$PROJECT/vendor";
+PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
+$vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
+$ds = DIRECTORY_SEPARATOR;
 
-if [ -f "$PROJECT/.phpcsgit" ]
-then
-  . $PROJECT/.phpcsgit
-fi
+$fileList = array();
+exec('git diff-index --cached --diff-filter=ACMR HEAD', $fileList, $exitcode);
+if ($exitcode) {
+    echo "\nError receiving data in git pre-commit hook.\n\n";
+    exit(1);
+}
 
-if [ "$IGNORE_WARNINGS" != "" ]
-then
-  if [ "$IGNORE_WARNINGS" != "N" ]
-  then
-    IGNORE_WARNINGS="-n"
-  else
-    IGNORE_WARNINGS=""
-fi
-else
-  IGNORE_WARNINGS=""
-fi
+$checkFileList = array();
+$checkPhpFileList = array();
 
-if [ "$PROGRESS" != "" ]
-then
-  if [ "$PROGRESS" != "N" ]
-  then
-    PROGRESS="-p"
-  else
-    PROGRESS=""
-  fi
-else
-  PROGRESS=""
-fi
+foreach ($fileList as $fileInfo) {
+    list($fileInfo, $fileName)  = explode("\t", $fileInfo, 2);
+    $fileInfo = explode(' ', $fileInfo);
+    if (PHP_CodeSniffer_Yii2_GitHook\Utils::isCheckFile($fileName)) {
+        $checkFileList[$fileName] = $fileInfo;
+        if (PHP_CodeSniffer_Yii2_GitHook\Utils::isCheckFile($fileName, 'php')) {
+            $checkPhpFileList[$fileName] = &$checkFileList[$fileName];
+        }
+    }
+}
 
-if [ "$COLORS" != "" ]
-then
-  if [ "$COLORS" != "N" ]
-  then
-    COLORS="--runtime-set colors 1"
-  else
-    COLORS="--runtime-set colors 0"
-  fi
-else
-  COLORS="--runtime-set colors 0"
-fi
+foreach ($checkFileList as $fileName => &$fileInfo) {
+    $execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec("git cat-file blob {$fileInfo[3]}", '');
+    if ($execResult['exitcode'] != 0) {
+        echo "\nError receiving data in git pre-commit hook.\n\n";
+        exit(2);
+    }
+    $fileInfo['content'] = $execResult['stdout'];
+}
+unset($fileInfo);
 
-if [ "$STANDARD" = "Yii2" ]
-then
-  STANDARD="$VENDOR/yiisoft/yii2-coding-standards/Yii2"
-fi
-if [ "$STANDARD" = "Yii2Ext" ]
-then
-  STANDARD="$VENDOR/mj4444/php_codesniffer_yii2_githook/Yii2Ext"
-fi
+$hasError = false;
+foreach ($checkPhpFileList as $chkFileName => $fileInfo) {
+    $execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec('php -l', $fileInfo['content']);
+    if ($execResult['exitcode'] != 0) {
+        echo str_replace(' in - on ', " in {$chkFileName} on ", $execResult['stderr']);
+        $hasError = true;
+    }
+}
+if ($hasError) {
+    echo "\nFix the error before commit.\n\n";
+    exit(3);
+}
 
-if [ -e $TMP_STAGING ]
-then
-  rm -rf $TMP_STAGING
-fi
-mkdir $TMP_STAGING
+$hasError = false;
+foreach ($checkFileList as $chkFileName => $fileInfo) {
+    PHP_CodeSniffer_Yii2_GitHook\Utils::setConfigParam('STDIN_PATH', $chkFileName);
+    $stdArgv = 'standard encoding colors ignore_warnings extensions stdin_path';
+    $stdArgvText = PHP_CodeSniffer_Yii2_GitHook\Utils::createParamStr($stdArgv, true);
+    $execCmd = "{$vendorDir}{$ds}squizlabs{$ds}php_codesniffer{$ds}scripts{$ds}phpcs {$stdArgvText}";
+    $execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec($execCmd, $fileInfo['content']);
+    if ($execResult['exitcode'] != 0) {
+        $hasError = true;
+        echo $execResult['stdout'];
+    }
+}
+if ($hasError) {
+    echo "\nFix the error before commit.\n\n";
+    echo "Use \"// @codingStandardsIgnoreFile\" to skip check.\n\n";
+    exit(4);
+}
 
-# JS files
-
-STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep \\\\.js$`
-
-FILES=
-for FILE in $STAGED_FILES_CMD
-do
-  ID=$(git diff-index --cached HEAD $FILE | cut -d " " -f4)
-  mkdir -p "$TMP_STAGING/$(dirname $FILE)"
-  git cat-file blob $ID > "$TMP_STAGING/$FILE"
-  FILES="$FILES $TMP_STAGING/$FILE"
-done
-
-if [ "$FILES" != "" ]
-then
-  echo "Running Code Sniffer for JS..."
-  $VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS $FILES
-  if [ $? != 0 ]
-  then
-    echo "Fix the error before commit."
-    rm -rf $TMP_STAGING
-    exit 1
-  fi
-fi
-
-# PHP files
-
-STAGED_FILES_CMD=`git diff-index --cached --name-only --diff-filter=ACMR HEAD | grep -E "\\\\.(php|phtml)$"`
-
-echo "Checking PHP Lint..."
-FILES=
-for FILE in $STAGED_FILES_CMD
-do
-  ID=$(git diff-index --cached HEAD $FILE | cut -d " " -f4)
-  mkdir -p "$TMP_STAGING/$(dirname $FILE)"
-  git cat-file blob $ID > "$TMP_STAGING/$FILE"
-  php -l -d display_errors=0 $TMP_STAGING/$FILE
-  if [ $? != 0 ]
-  then
-    echo "Fix the error before commit."
-    rm -rf $TMP_STAGING
-    exit 1
-  fi
-  FILES="$FILES $TMP_STAGING/$FILE"
-done
-
-if [ "$FILES" != "" ]
-then
-  echo "Running Code Sniffer for PHP..."
-  $VENDOR/bin/phpcs --standard=$STANDARD --encoding=$ENCODING $COLORS $IGNORE_WARNINGS $PROGRESS $FILES
-  if [ $? != 0 ]
-  then
-    echo "Fix the error before commit."
-    rm -rf $TMP_STAGING
-    exit 1
-  fi
-fi
-
-rm -rf $TMP_STAGING
-exit $?
+exit(0);

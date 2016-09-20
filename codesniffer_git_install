@@ -10,11 +10,12 @@ if (!$gitProjectDir) {
     echo "Unable to install hook: Git folder not found!\n\n";
     exit(1);
 }
-$shortVendorDir = substr($vendorDir, strlen($gitProjectDir));
+$shortVendorDir = substr($vendorDir, strlen($gitProjectDir) + 1);
 $shortSourceDir = substr($sourceDir, strlen($gitProjectDir) + 1);
 $ds = DIRECTORY_SEPARATOR;
 $hooksDir = "{$gitProjectDir}{$ds}.git{$ds}hooks";
 $infoDir = "{$gitProjectDir}{$ds}.git{$ds}info";
+chdir($gitProjectDir);
 
 PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
 
@@ -24,7 +25,7 @@ $hookFileName = "{$hooksDir}{$ds}pre-commit";
 $hookSourceFileName = "{$sourceDir}{$ds}hooks{$ds}pre-commit";
 
 if (file_exists($hookFileName)) {
-    echo "Remove file \"{$hookFileName}\"\n";
+    echo "Remove old file \"{$hookFileName}\"\n";
     if (!is_writable($hookFileName)) {
         echo "Unable to install hook: \"{$hookFileName}\" is readonly!\n\n";
         exit(2);
@@ -38,26 +39,21 @@ if (file_exists($hookFileName)) {
         exit(2);
     }
 }
-echo "Copy hook from \"{$hookSourceFileName}\" to \"{$hookFileName}\"\n";
-if (!@copy($hookSourceFileName, $hookFileName)) {
-    echo "Unable to install hook: Cannot copy hook file!\n\n";
-    exit(2);
-}
-@chmod($hookFileName, 0775);
 
 $shortVendorDirS = addslashes($shortVendorDir);
 $shortSourceDirS = addslashes($shortSourceDir);
-if ($shortVendorDirS != '/vendor') {
-    PHP_CodeSniffer_Yii2_GitHook\Utils::fileStrReplace($hookFileName, '$PROJECT/vendor', "\$PROJECT{$shortVendorDirS}");
-}
 
-$extensions = PHP_CodeSniffer_Yii2_GitHook\Utils::getExtensions();
-$extensionsS = addslashes($extensions);
-echo "Install git filter \"phpcbf\" for \"{$extensionsS}\" files\n";
+$hookFileContent = "#!/bin/sh\n\n{$shortVendorDirS}/mj4444/php_codesniffer_yii2_githook/hooks/pre-commit $@\n";
+file_put_contents($hookFileName, $hookFileContent);
+@chmod($hookFileName, 0775);
+
+$extensions = PHP_CodeSniffer_Yii2_GitHook\Utils::getExtensionsAsArray();
+echo "Install git filter \"phpcbf\" for \"{$extensions}\" files\n";
 
 passthru("git config filter.phpcbf.required true");
-passthru("git config filter.phpcbf.clean \"{$shortSourceDirS}{$ds}codesniffer_git_filter_clean %f\"");
-$extensions = explode(',', $extensions);
+passthru("git config filter.phpcbf.clean \"{$shortSourceDirS}{$ds}hooks{$ds}filter_clean %f\"");
+passthru("git config filter.phpcbf.smudge cat");
+
 $extensionsAttrList = array();
 foreach ($extensions as $ext) {
     $extensionsAttrList["*.{$ext} filter=phpcbf"] = true;

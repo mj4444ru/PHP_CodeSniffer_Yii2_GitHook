@@ -1,0 +1,56 @@
+#!/usr/bin/env php
+<?php
+
+ob_start(function($buffer, $phase) {
+    fwrite(STDERR, $buffer);
+    return $GLOBALS['output'];
+});
+
+$root = dirname(__DIR__);
+require  "{$root}/utils.php";
+
+PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
+$vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
+$input = file_get_contents('php://stdin');
+$output = $input;
+$chkFileName = $_SERVER['argv'][1];
+$ds = DIRECTORY_SEPARATOR;
+
+if (PHP_CodeSniffer_Yii2_GitHook\Utils::isCheckFile($chkFileName, 'php')) {
+    $execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec('php -l', $output);
+    if ($execResult['exitcode'] != 0) {
+        echo str_replace(' in - on ', " in {$chkFileName} on ", $execResult['stderr']);
+        if (PHP_CodeSniffer_Yii2_GitHook\Utils::getConfigParam('FILTER_NO_ABORT')) {
+            exit(0);
+        }
+        exit(1);
+    }
+}
+
+PHP_CodeSniffer_Yii2_GitHook\Utils::setConfigParam('STDIN_PATH', $chkFileName);
+$stdArgv = 'standard encoding colors ignore_warnings extensions stdin_path';
+$stdArgvText = PHP_CodeSniffer_Yii2_GitHook\Utils::createParamStr($stdArgv, true);
+
+$execCmd = "{$vendorDir}{$ds}squizlabs{$ds}php_codesniffer{$ds}scripts{$ds}phpcbf {$stdArgvText}";
+$execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec($execCmd, $output);
+if ($execResult['exitcode'] == 1) {
+    $output = $execResult['stdout'];
+}
+
+$execCmd = "{$vendorDir}{$ds}squizlabs{$ds}php_codesniffer{$ds}scripts{$ds}phpcs {$stdArgvText}";
+$execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec($execCmd, $output);
+if ($execResult['exitcode'] != 0) {
+    echo $execResult['stdout'];
+    echo "Use \"// @codingStandardsIgnoreFile\" to skip check.\n\n";
+    $output = $input;
+    if (PHP_CodeSniffer_Yii2_GitHook\Utils::getConfigParam('FILTER_NO_ABORT')) {
+        exit(0);
+    }
+    exit(2);
+}
+
+if ($output != $input) {
+    echo "When added found errors have been fixed in \"{$chkFileName}\"\n";
+}
+
+exit(0);

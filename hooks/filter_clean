@@ -1,0 +1,10 @@
+#!/bin/sh
+
+PPPID=`ps -p $PPID -o ppid -h`
+if ! ps -p $PPPID -o command -h | grep -q "^ *git\( .*\)\? add "; then
+    cat
+    exit 0
+fi
+
+"$0"_php $@
+exit $?

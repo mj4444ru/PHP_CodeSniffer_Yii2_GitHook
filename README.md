@@ -26,6 +26,11 @@ Execute script `vendor/bin/codesniffer_fix "file.name"` for fix files.
 
 Use file "GIT_ROOT/.phpcsgit" for configuration codesniffer.
 
+Resolving conflicts
+-----
+
+Use `// @codingStandardsIgnoreFile` to skip check.
+
 Links
 -----
 

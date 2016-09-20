@@ -6,10 +6,10 @@ var_dump($_SERVER);die();
 require 'utils.php';
 
 PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
-PHP_CodeSniffer_Yii2_GitHook\Utils::replaceArgv("standard encoding colors ignore_warnings progress extensions *");
+PHP_CodeSniffer_Yii2_GitHook\Utils::replaceArgv('standard encoding colors ignore_warnings progress extensions *');
 $vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
 
-echo "Running Code Sniffer...";
+echo "Running Code Sniffer...\n";
 
 require "{$vendorDir}/squizlabs/php_codesniffer/CodeSniffer/CLI.php";
 

@@ -13,10 +13,11 @@ class Utils
     protected static $defaultConfigParams = array(
         'STANDARD' => 'Yii2',
         'ENCODING' => 'utf-8',
-        'COLORS' => true,
         'IGNORE_WARNINGS' => false,
         'PROGRESS' => true,
-        'EXTENSIONS' => 'js,php,phtml',
+        'COLORS' => true,
+        'FILTER_NO_ABORT' => false,
+        'EXTENSIONS' => 'js,css,php,phtml',
         'PHPEXTENSIONS' => 'php,phtml',
     );
 
@@ -60,6 +61,10 @@ class Utils
                 if (static::updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)) {
                     $customData = static::readProjectConfigToArray($customFileName);
                 }
+            } elseif (version_compare($customData['VERSION'], $simpleData['VERSION'], '<')) {
+                if (static::updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)) {
+                    $customData = static::readProjectConfigToArray($customFileName);
+                }
             }
         }
         $customData = array_merge($simpleData, $customData);
@@ -80,7 +85,7 @@ class Utils
 
     protected static function installProjectConfig($customFileName, $simpleFileName)
     {
-        fwrite(STDERR, "Copy config from \"{$simpleFileName}\" to \"{$customFileName}\"\n");
+        echo "Copy config from \"{$simpleFileName}\" to \"{$customFileName}\"\n";
         @mkdir(dirname($customFileName), 0777, true);
         @copy($simpleFileName, $customFileName);
     }
@@ -97,21 +102,20 @@ class Utils
         }
         $newFile = false;
         if (!array_key_exists('VERSION', $customData)) {
-            $newFile = static::updateProjectConfigTo20160915($customFile, $simpleFile);
-            if (!$newFile) {
-                return false;
-            }
+            $newFile = static::updateProjectConfigTo20160915($customFile, $simpleFile, $customData, $simpleData);
+        } elseif (version_compare($customData['VERSION'], '2016.09.20', '<')) {
+            $newFile = static::updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData);
         }
         if ($newFile) {
-            fwrite(STDERR, "Update config \"{$customFileName}\"\n");
-            if (@!file_put_contents($customFileName, implode('', $newFile))) {
-                return false;
+            echo "Update config \"{$customFileName}\"\n";
+            if (@file_put_contents($customFileName, implode('', $newFile))) {
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
-    protected static function updateProjectConfigTo20160915($customFile, $simpleFile)
+    protected static function updateProjectConfigTo20160915($customFile, $simpleFile, $customData, $simpleData)
     {
         $newFile = array();
         foreach ($simpleFile as $line) {
@@ -134,6 +138,19 @@ class Utils
         if (!$fna) {
             $newFile[] = "FILTER_NO_ABORT=N\n";
         }
+        return static::updateProjectConfigTo20160920($newFile, $simpleFile, $customData, $simpleData);
+    }
+
+    protected static function updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData)
+    {
+        $newFile = $customFile;
+        foreach ($newFile as &$line) {
+            if (substr($line, 0, 8) == 'VERSION=') {
+                $line = "VERSION=2016.09.20\n";
+            }
+        }
+        $newFile[] = "EXTENSIONS=js,css,php,inc,phtml\n";
+        $newFile[] = "PHPEXTENSIONS=php,inc,phtml\n";
         return $newFile;
     }
 
@@ -170,10 +187,13 @@ class Utils
         static::setArgv(static::createArgv($params));
     }
 
-    public static function createArgv($params)
+    public static function createArgv($params, $noFirsArg = false)
     {
         $oldArgv = $_SERVER['argv'];
         $argv = array(array_shift($oldArgv));
+        if ($noFirsArg) {
+            $argv = array();
+        }
         if (is_string($params)) {
             $params = explode(' ', $params);
         }
@@ -208,9 +228,15 @@ class Utils
                     break;
                     $argv[] = $param;
                 case 'extensions':
-                    $value = str_replace(' ', '', static::getExtensions());
+                    $value = static::getExtensions();
                     if ($value) {
                         $argv[] = "--extensions={$value}";
+                    }
+                    break;
+                case 'stdin_path':
+                    $value = static::getConfigParam('STDIN_PATH');
+                    if ($value) {
+                        $argv[] = "--stdin-path={$value}";
                     }
                     break;
                 case '*':
@@ -221,6 +247,15 @@ class Utils
             }
         }
         return $argv;
+    }
+
+    public static function createParamStr($params, $noFirsArg = false)
+    {
+        $argv = static::createArgv($params, $noFirsArg);
+        foreach ($argv as &$arg) {
+            $arg = escapeshellarg($arg);
+        }
+        return implode(' ', $argv);
     }
 
     public static function setArgv($newArgv)
@@ -274,9 +309,37 @@ class Utils
         return __DIR__;
     }
 
-    public static function getExtensions()
+    public static function getExtensions($php = false)
     {
-        return static::getConfigParam('EXTENSIONS');
+        return str_replace(' ', '', static::getConfigParam($php ? 'PHPEXTENSIONS' : 'EXTENSIONS'));
+    }
+
+    public static function getExtensionsAsArray($php = false)
+    {
+        static $cache = array();
+        $extStr = static::getExtensions($php);
+        if (!array_key_exists($extStr, $cache)) {
+            $extList = explode(',', $extStr);
+            foreach ($extList as &$ext) {
+                if (strpos($ext, '/') !== false) {
+                    $extArr = explode('/', $ext);
+                    $ext = $extArr[0];
+                }
+            }
+            $cache[$extStr] = $extList;
+        }
+        return $cache[$extStr];
+    }
+
+
+    public static function isCheckFile($fileName, $php = false)
+    {
+        foreach (static::getExtensionsAsArray($php) as $ext) {
+            if (substr_compare($fileName, ".{$ext}", 0 - (strlen($ext) + 1)) == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected static function prepareParamStandard($standard)
@@ -303,5 +366,23 @@ class Utils
             return false;
         }
         return boolval(@file_put_contents($fileName, $newFileContent));
+    }
+
+    public static function exec($cmd, $stdin)
+    {
+        $result = array('exitcode' => -1, 'stdout' => '', 'stderr' => 'PHP: proc_open error');
+        $descriptorspec = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
+        $process = proc_open($cmd, $descriptorspec, $pipes);
+        if (!is_resource($process)) {
+            return $result;
+        }
+        fwrite($pipes[0], $stdin);
+        fclose($pipes[0]);
+        $result['stdout'] = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $result['stderr'] = stream_get_contents($pipes[2]);
+        fclose($pipes[2]);
+        $result['exitcode'] = proc_close($process);
+        return $result;
     }
 }
