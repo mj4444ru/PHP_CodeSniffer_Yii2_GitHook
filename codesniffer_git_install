@@ -48,7 +48,8 @@ file_put_contents($hookFileName, $hookFileContent);
 @chmod($hookFileName, 0775);
 
 $extensions = PHP_CodeSniffer_Yii2_GitHook\Utils::getExtensionsAsArray();
-echo "Install git filter \"phpcbf\" for \"{$extensions}\" files\n";
+$extensionsText = implode(', ', $extensions);
+echo "Install git filter \"phpcbf\" for \"{$extensionsText}\" files\n";
 
 passthru("git config filter.phpcbf.required true");
 passthru("git config filter.phpcbf.clean \"{$shortSourceDirS}{$ds}hooks{$ds}filter_clean %f\"");
