@@ -1,8 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-var_dump($_SERVER);die();
-
 require 'utils.php';
 
 PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
