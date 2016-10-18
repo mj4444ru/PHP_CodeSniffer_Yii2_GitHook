@@ -4,8 +4,9 @@
 $root = dirname(__DIR__);
 require  "{$root}/utils.php";
 
-PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
-$vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
+$utils = new PHP_CodeSniffer_Yii2_GitHook\Utils();
+$vendorDir = $utils->getVendorDir();
+$projectDir = $utils->getProjectDir();
 $ds = DIRECTORY_SEPARATOR;
 
 $fileList = array();
@@ -21,16 +22,16 @@ $checkPhpFileList = array();
 foreach ($fileList as $fileInfo) {
     list($fileInfo, $fileName)  = explode("\t", $fileInfo, 2);
     $fileInfo = explode(' ', $fileInfo);
-    if (PHP_CodeSniffer_Yii2_GitHook\Utils::isCheckFile($fileName)) {
+    if ($utils->isCheckFile($fileName)) {
         $checkFileList[$fileName] = $fileInfo;
-        if (PHP_CodeSniffer_Yii2_GitHook\Utils::isCheckFile($fileName, 'php')) {
+        if ($utils->isCheckFile($fileName, 'php')) {
             $checkPhpFileList[$fileName] = &$checkFileList[$fileName];
         }
     }
 }
 
 foreach ($checkFileList as $fileName => &$fileInfo) {
-    $execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec("git cat-file blob {$fileInfo[3]}", '');
+    $execResult = $utils->exec("git cat-file blob {$fileInfo[3]}", '');
     if ($execResult['exitcode'] != 0) {
         echo "\nError receiving data in git pre-commit hook.\n\n";
         exit(2);
@@ -41,7 +42,7 @@ unset($fileInfo);
 
 $hasError = false;
 foreach ($checkPhpFileList as $chkFileName => $fileInfo) {
-    $execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec('php -l', $fileInfo['content']);
+    $execResult = $utils->exec('php -l', $fileInfo['content']);
     if ($execResult['exitcode'] != 0) {
         echo str_replace(' in - on ', " in {$chkFileName} on ", $execResult['stderr']);
         $hasError = true;
@@ -54,11 +55,14 @@ if ($hasError) {
 
 $hasError = false;
 foreach ($checkFileList as $chkFileName => $fileInfo) {
-    PHP_CodeSniffer_Yii2_GitHook\Utils::setConfigParam('STDIN_PATH', $chkFileName);
+    if ($utils->isIgnoreFile("{$projectDir}/{$chkFileName}")) {
+        continue;
+    }
+    $utils->setConfigParam('STDIN_PATH', $chkFileName);
     $stdArgv = 'standard encoding colors ignore_warnings extensions stdin_path';
-    $stdArgvText = PHP_CodeSniffer_Yii2_GitHook\Utils::createParamStr($stdArgv, true);
+    $stdArgvText = $utils->createParamStr($stdArgv, true);
     $execCmd = "{$vendorDir}{$ds}squizlabs{$ds}php_codesniffer{$ds}scripts{$ds}phpcs {$stdArgvText}";
-    $execResult = PHP_CodeSniffer_Yii2_GitHook\Utils::exec($execCmd, $fileInfo['content']);
+    $execResult = $utils->exec($execCmd, $fileInfo['content']);
     if ($execResult['exitcode'] != 0) {
         $hasError = true;
         echo $execResult['stdout'];

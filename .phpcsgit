@@ -4,7 +4,7 @@
 # PROGRESS - Y, N
 # COLORS - Y, N
 # FILTER_NO_ABORT - Y, N
-VERSION=2016.09.20
+VERSION=2016.10.17
 STANDARD=Yii2Ext
 ENCODING="utf-8"
 IGNORE_WARNINGS=N
@@ -13,3 +13,4 @@ COLORS=Y
 FILTER_NO_ABORT=N
 EXTENSIONS=js,css,php,inc,phtml
 PHPEXTENSIONS=php,inc,phtml
+IGNORE=examples/ignore/*;examples/ignore.php

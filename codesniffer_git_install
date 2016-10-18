@@ -3,21 +3,18 @@
 
 require 'utils.php';
 
-$sourceDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getSelfDir();
-$vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
-$gitProjectDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getGitProjectDir();
+$utils = new PHP_CodeSniffer_Yii2_GitHook\Utils();
+$sourceDir = $utils->getSelfDir();
+$gitProjectDir = $utils->getGitProjectDir();
 if (!$gitProjectDir) {
     echo "Unable to install hook: Git folder not found!\n\n";
     exit(1);
 }
-$shortVendorDir = substr($vendorDir, strlen($gitProjectDir) + 1);
 $shortSourceDir = substr($sourceDir, strlen($gitProjectDir) + 1);
 $ds = DIRECTORY_SEPARATOR;
 $hooksDir = "{$gitProjectDir}{$ds}.git{$ds}hooks";
 $infoDir = "{$gitProjectDir}{$ds}.git{$ds}info";
 chdir($gitProjectDir);
-
-PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
 
 echo "Install hook in \"{$hooksDir}\"\n";
 
@@ -40,14 +37,13 @@ if (file_exists($hookFileName)) {
     }
 }
 
-$shortVendorDirS = addslashes($shortVendorDir);
 $shortSourceDirS = addslashes($shortSourceDir);
 
-$hookFileContent = "#!/bin/sh\n\n{$shortVendorDirS}/mj4444/php_codesniffer_yii2_githook/hooks/pre-commit $@\n";
+$hookFileContent = "#!/bin/sh\n\n{$shortSourceDirS}/hooks/pre-commit $@\n";
 file_put_contents($hookFileName, $hookFileContent);
 @chmod($hookFileName, 0775);
 
-$extensions = PHP_CodeSniffer_Yii2_GitHook\Utils::getExtensionsAsArray();
+$extensions = $utils->getExtensionsAsArray();
 $extensionsText = implode(', ', $extensions);
 echo "Install git filter \"phpcbf\" for \"{$extensionsText}\" files\n";
 

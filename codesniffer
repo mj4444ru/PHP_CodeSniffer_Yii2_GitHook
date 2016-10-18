@@ -3,13 +3,12 @@
 
 require 'utils.php';
 
-PHP_CodeSniffer_Yii2_GitHook\Utils::readProjectConfig();
-PHP_CodeSniffer_Yii2_GitHook\Utils::replaceArgv('standard encoding colors ignore_warnings progress extensions *');
-$vendorDir = PHP_CodeSniffer_Yii2_GitHook\Utils::getVendorDir();
+$utils = new PHP_CodeSniffer_Yii2_GitHook\Utils();
+$utils->replaceArgv('standard encoding colors ignore_warnings progress extensions ignore *');
 
 echo "Running Code Sniffer...\n";
 
-require "{$vendorDir}/squizlabs/php_codesniffer/CodeSniffer/CLI.php";
+require "{$utils->getVendorDir()}/squizlabs/php_codesniffer/CodeSniffer/CLI.php";
 
 $cli = new PHP_CodeSniffer_CLI();
 $cli->runphpcs();

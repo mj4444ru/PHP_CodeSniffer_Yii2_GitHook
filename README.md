@@ -29,7 +29,13 @@ Use file "GIT_ROOT/.phpcsgit" for configuration codesniffer.
 Resolving conflicts
 -----
 
-Use `// @codingStandardsIgnoreFile` to skip check.
+Use `// @codingStandardsIgnoreFile` to skip file check.
+
+Use `// @codingStandardsIgnoreLine` to skip line check.
+
+Use `// @codingStandardsIgnoreStart` and `// @codingStandardsIgnoreEnd` to skip fragment check.
+
+Use param `IGNORE` in config `.phpcsgit`
 
 Links
 -----

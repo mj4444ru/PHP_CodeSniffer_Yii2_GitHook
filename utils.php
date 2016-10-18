@@ -4,13 +4,13 @@ namespace PHP_CodeSniffer_Yii2_GitHook;
 
 class Utils
 {
-    protected static $standardMap = array(
+    protected $standardMap = array(
         'Yii2' => '#VENDOR#/yiisoft/yii2-coding-standards/Yii2',
         'Yii2Ext' => '#SELF#/Yii2Ext',
         'PSR2Ext' => '#SELF#/PSR2Ext',
     );
 
-    protected static $defaultConfigParams = array(
+    protected $defaultConfigParams = array(
         'STANDARD' => 'Yii2',
         'ENCODING' => 'utf-8',
         'IGNORE_WARNINGS' => false,
@@ -21,49 +21,54 @@ class Utils
         'PHPEXTENSIONS' => 'php,phtml',
     );
 
-    protected static $configParams = array(
-    );
+    protected $configParams = array();
+    protected $cache = array();
 
-    public static function getConfigParam($name)
+    public function __construct($readProjectConfig = true)
     {
-        if (array_key_exists($name, static::$configParams)) {
-            return static::$configParams[$name];
-        } elseif (array_key_exists($name, static::$defaultConfigParams)) {
-            return static::$defaultConfigParams[$name];
+        if ($readProjectConfig) {
+            $this->readProjectConfig();
+        }
+    }
+
+    public function getConfigParam($name)
+    {
+        if (array_key_exists($name, $this->configParams)) {
+            return $this->configParams[$name];
+        } elseif (array_key_exists($name, $this->defaultConfigParams)) {
+            return $this->defaultConfigParams[$name];
         }
         return null;
     }
 
-    public static function setConfigParam($name, $value)
+    public function setConfigParam($name, $value)
     {
         if (is_null($value)) {
-            if (array_key_exists($name, static::$configParams)) {
-                unset(static::$configParams[$name]);
+            if (array_key_exists($name, $this->configParams)) {
+                unset($this->configParams[$name]);
             }
         } else {
-            static::$configParams[$name] = $value;
+            $this->configParams[$name] = $value;
         }
     }
 
-    public static function readProjectConfig($configName = '.phpcsgit')
+    public function readProjectConfig($configName = '.phpcsgit')
     {
-        $selfDir = static::getSelfDir();
-        $projectDir = static::getProjectDir();
-        $simpleFileName = "{$selfDir}/.phpcsgit";
-        $customFileName = "{$projectDir}/{$configName}";
-        $simpleData = static::readProjectConfigToArray($simpleFileName);
-        $customData = static::readProjectConfigToArray($customFileName);
+        $simpleFileName = "{$this->getSelfDir()}/.phpcsgit";
+        $customFileName = "{$this->getProjectDir()}/{$configName}";
+        $simpleData = $this->readProjectConfigToArray($simpleFileName);
+        $customData = $this->readProjectConfigToArray($customFileName);
         if ($simpleData && array_key_exists('VERSION', $simpleData)) {
             if (!$customData) {
-                static::installProjectConfig($customFileName, $simpleFileName);
-                $customData = static::readProjectConfigToArray($customFileName);
+                $this->installProjectConfig($customFileName, $simpleFileName);
+                $customData = $this->readProjectConfigToArray($customFileName);
             } elseif (!array_key_exists('VERSION', $customData)) {
-                if (static::updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)) {
-                    $customData = static::readProjectConfigToArray($customFileName);
+                if ($this->updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)) {
+                    $customData = $this->readProjectConfigToArray($customFileName);
                 }
             } elseif (version_compare($customData['VERSION'], $simpleData['VERSION'], '<')) {
-                if (static::updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)) {
-                    $customData = static::readProjectConfigToArray($customFileName);
+                if ($this->updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)) {
+                    $customData = $this->readProjectConfigToArray($customFileName);
                 }
             }
         }
@@ -75,22 +80,22 @@ class Utils
                 case 'COLORS':
                 case 'FILTER_NO_ABORT':
                     $value = !in_array(strtoupper($value), array('', 'N', 'FALSE', '0'), true);
-                    static::setConfigParam($key, $value);
+                    $this->setConfigParam($key, $value);
                     break;
                 default:
-                    static::setConfigParam($key, $value);
+                    $this->setConfigParam($key, $value);
             }
         }
     }
 
-    protected static function installProjectConfig($customFileName, $simpleFileName)
+    protected function installProjectConfig($customFileName, $simpleFileName)
     {
         echo "Copy config from \"{$simpleFileName}\" to \"{$customFileName}\"\n";
         @mkdir(dirname($customFileName), 0777, true);
         @copy($simpleFileName, $customFileName);
     }
 
-    protected static function updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)
+    protected function updateProjectConfig($customFileName, $simpleFileName, $customData, $simpleData)
     {
         if (!is_file($customFileName) || !is_readable($customFileName) || !is_writable($customFileName)) {
             return;
@@ -100,22 +105,31 @@ class Utils
         if (!is_array($customFile) || !is_array($simpleFile)) {
             return false;
         }
+        foreach ($customFile as &$line) {
+            $line = rtrim($line, "\r\n");
+        }
+        foreach ($simpleFile as &$line) {
+            $line = rtrim($line, "\r\n");
+        }
         $newFile = false;
         if (!array_key_exists('VERSION', $customData)) {
-            $newFile = static::updateProjectConfigTo20160915($customFile, $simpleFile, $customData, $simpleData);
+            $newFile = $this->updateProjectConfigTo20160915($customFile, $simpleFile, $customData, $simpleData);
         } elseif (version_compare($customData['VERSION'], '2016.09.20', '<')) {
-            $newFile = static::updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData);
+            $newFile = $this->updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData);
+        } elseif (version_compare($customData['VERSION'], '2016.10.17', '<')) {
+            $newFile = $this->updateProjectConfigTo20161017($customFile, $simpleFile, $customData, $simpleData);
         }
         if ($newFile) {
             echo "Update config \"{$customFileName}\"\n";
-            if (@file_put_contents($customFileName, implode('', $newFile))) {
+            $newFile[] = '';
+            if (@file_put_contents($customFileName, implode("\n", $newFile))) {
                 return true;
             }
         }
         return false;
     }
 
-    protected static function updateProjectConfigTo20160915($customFile, $simpleFile, $customData, $simpleData)
+    protected function updateProjectConfigTo20160915($customFile, $simpleFile, $customData, $simpleData)
     {
         $newFile = array();
         foreach ($simpleFile as $line) {
@@ -136,25 +150,40 @@ class Utils
             }
         }
         if (!$fna) {
-            $newFile[] = "FILTER_NO_ABORT=N\n";
+            $newFile[] = "FILTER_NO_ABORT=N";
         }
-        return static::updateProjectConfigTo20160920($newFile, $simpleFile, $customData, $simpleData);
+        return $this->updateProjectConfigTo20160920($newFile, $simpleFile, $customData, $simpleData);
     }
 
-    protected static function updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData)
+    protected function updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData)
     {
         $newFile = $customFile;
         foreach ($newFile as &$line) {
             if (substr($line, 0, 8) == 'VERSION=') {
-                $line = "VERSION=2016.09.20\n";
+                $line = "VERSION=2016.09.20";
             }
         }
-        $newFile[] = "EXTENSIONS=js,css,php,inc,phtml\n";
-        $newFile[] = "PHPEXTENSIONS=php,inc,phtml\n";
+        $extensionsValue = $simpleData['EXTENSIONS'];
+        $phpextensionsValue = $simpleData['PHPEXTENSIONS'];
+        $newFile[] = "EXTENSIONS={$extensionsValue}";
+        $newFile[] = "PHPEXTENSIONS={$phpextensionsValue}";
+        return $this->updateProjectConfigTo20161017($newFile, $simpleFile, $customData, $simpleData);
+    }
+
+    protected function updateProjectConfigTo20161017($customFile, $simpleFile, $customData, $simpleData)
+    {
+        $newFile = $customFile;
+        foreach ($newFile as &$line) {
+            if (substr($line, 0, 8) == 'VERSION=') {
+                $line = "VERSION=2016.10.17";
+            }
+        }
+        $ignoreValue = $simpleData['IGNORE'];
+        $newFile[] = "IGNORE={$ignoreValue}";
         return $newFile;
     }
 
-    protected static function readProjectConfigToArray($fileName, $raw = false)
+    protected function readProjectConfigToArray($fileName, $raw = false)
     {
         if (!is_file($fileName) || !is_readable($fileName)) {
             return;
@@ -182,12 +211,12 @@ class Utils
         return $params;
     }
 
-    public static function replaceArgv($params)
+    public function replaceArgv($params)
     {
-        static::setArgv(static::createArgv($params));
+        $this->setArgv($this->createArgv($params));
     }
 
-    public static function createArgv($params, $noFirsArg = false)
+    public function createArgv($params, $noFirsArg = false)
     {
         $oldArgv = $_SERVER['argv'];
         $argv = array(array_shift($oldArgv));
@@ -200,13 +229,13 @@ class Utils
         foreach ($params as $param) {
             switch ($param) {
                 case 'standard':
-                    $value = static::prepareParamStandard(static::getConfigParam('STANDARD'));
+                    $value = $this->prepareParamStandard($this->getConfigParam('STANDARD'));
                     if ($value) {
                         $argv[] = "--standard={$value}";
                     }
                     break;
                 case 'encoding':
-                    $value = static::getConfigParam('ENCODING');
+                    $value = $this->getConfigParam('ENCODING');
                     if ($value) {
                         $argv[] = "--encoding={$value}";
                     }
@@ -214,29 +243,35 @@ class Utils
                 case 'colors':
                         $argv[] = "--runtime-set";
                         $argv[] = "colors";
-                        $argv[] = static::getConfigParam('COLORS') ? '1' : '0';
+                        $argv[] = $this->getConfigParam('COLORS') ? '1' : '0';
                     break;
                 case 'ignore_warnings':
-                    if (static::getConfigParam('IGNORE_WARNINGS')) {
+                    if ($this->getConfigParam('IGNORE_WARNINGS')) {
                         $argv[] = '-n';
                     }
                     break;
                 case 'progress':
-                    if (static::getConfigParam('PROGRESS')) {
+                    if ($this->getConfigParam('PROGRESS')) {
                         $argv[] = '-p';
                     }
                     break;
                     $argv[] = $param;
                 case 'extensions':
-                    $value = static::getExtensions();
+                    $value = $this->getExtensions();
                     if ($value) {
                         $argv[] = "--extensions={$value}";
                     }
                     break;
                 case 'stdin_path':
-                    $value = static::getConfigParam('STDIN_PATH');
+                    $value = $this->getConfigParam('STDIN_PATH');
                     if ($value) {
                         $argv[] = "--stdin-path={$value}";
+                    }
+                    break;
+                case 'ignore':
+                    $value = $this->getIgnore();
+                    if ($value) {
+                        $argv[] = "--ignore={$value}";
                     }
                     break;
                 case '*':
@@ -249,16 +284,16 @@ class Utils
         return $argv;
     }
 
-    public static function createParamStr($params, $noFirsArg = false)
+    public function createParamStr($params, $noFirsArg = false)
     {
-        $argv = static::createArgv($params, $noFirsArg);
+        $argv = $this->createArgv($params, $noFirsArg);
         foreach ($argv as &$arg) {
             $arg = escapeshellarg($arg);
         }
         return implode(' ', $argv);
     }
 
-    public static function setArgv($newArgv)
+    public function setArgv($newArgv)
     {
         $_SERVER['argv'] = $newArgv;
         $_SERVER['argc'] = count($newArgv);
@@ -266,24 +301,23 @@ class Utils
         $GLOBALS['argc'] = $_SERVER['argc'];
     }
 
-    public static function getProjectDir()
+    public function getProjectDir()
     {
-        static $cache;
-        if (is_null($cache)) {
-            $cache = static::getGitProjectDir();
+        if (!isset($this->cache['getProjectDir'])) {
+            $cache = $this->getGitProjectDir();
             if (!$cache) {
-                $cache = dirname(static::getVendorDir());
+                $cache = dirname($this->getVendorDir());
             }
+            $this->cache['getProjectDir'] = $cache;
         }
-        return $cache;
+        return $this->cache['getProjectDir'];
     }
 
-    public static function getGitProjectDir()
+    public function getGitProjectDir()
     {
-        static $cache;
-        if (is_null($cache)) {
+        if (!isset($this->cache['getGitProjectDir'])) {
             $cache = false;
-            $dir = dirname(static::getVendorDir());
+            $dir = dirname($this->getVendorDir());
             for ($i = 0; $i < 5; $i++) {
                 if (is_file("{$dir}/.git/config")) {
                     $cache = $dir;
@@ -291,33 +325,33 @@ class Utils
                 }
                 $dir = dirname($dir);
             }
+            $this->cache['getGitProjectDir'] = $cache;
         }
-        return $cache;
+        return $this->cache['getGitProjectDir'];
     }
 
-    public static function getVendorDir()
+    public function getVendorDir()
     {
-        static $cache;
-        if (is_null($cache)) {
-            $cache = dirname(dirname(static::getSelfDir()));
+        if (!isset($this->cache['getVendorDir'])) {
+            $this->cache['getVendorDir'] = dirname(dirname($this->getSelfDir()));
         }
-        return $cache;
+        return $this->cache['getVendorDir'];
     }
 
-    public static function getSelfDir()
+    public function getSelfDir()
     {
         return __DIR__;
     }
 
-    public static function getExtensions($php = false)
+    public function getExtensions($php = false)
     {
-        return str_replace(' ', '', static::getConfigParam($php ? 'PHPEXTENSIONS' : 'EXTENSIONS'));
+        return str_replace(' ', '', $this->getConfigParam($php ? 'PHPEXTENSIONS' : 'EXTENSIONS'));
     }
 
-    public static function getExtensionsAsArray($php = false)
+    public function getExtensionsAsArray($php = false)
     {
         static $cache = array();
-        $extStr = static::getExtensions($php);
+        $extStr = $this->getExtensions($php);
         if (!array_key_exists($extStr, $cache)) {
             $extList = explode(',', $extStr);
             foreach ($extList as &$ext) {
@@ -331,10 +365,51 @@ class Utils
         return $cache[$extStr];
     }
 
-
-    public static function isCheckFile($fileName, $php = false)
+    public function getIgnore($asArray = false)
     {
-        foreach (static::getExtensionsAsArray($php) as $ext) {
+        if (!isset($this->cache['getIgnore'])) {
+            $ignore = $this->getConfigParam('IGNORE');
+            if (!$ignore) {
+                return false;
+            }
+            $projectDir = $this->getProjectDir();
+            $ignoreArray = explode(',', str_replace(';', ',', $ignore));
+            foreach ($ignoreArray as &$ignoreItem) {
+                $ignoreItem = ltrim($ignoreItem, '\\/');
+                $ignoreItem = str_replace('\\*', '*', preg_quote("{$projectDir}/{$ignoreItem}"));
+                $ignoreItem = "^{$ignoreItem}$";
+            }
+            $this->cache['getIgnore'] = $ignoreArray;
+        }
+        return $asArray ? $this->cache['getIgnore'] : implode(',', $this->cache['getIgnore']);
+    }
+
+    public function isIgnoreFile($fileName)
+    {
+        $ignore = $this->getIgnore(true);
+        if (!is_array($ignore)) {
+            return false;
+        }
+        foreach ($ignore as $pattern) {
+            $replacements = array(
+                '\\,' => ',',
+                '*'   => '.*',
+            );
+            if (DIRECTORY_SEPARATOR === '\\') {
+                $replacements['/'] = '\\\\';
+            }
+            $pattern = strtr($pattern, $replacements);
+            $pattern = "`{$pattern}`i";
+            if (preg_match($pattern, $fileName) === 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function isCheckFile($fileName, $php = false)
+    {
+        foreach ($this->getExtensionsAsArray($php) as $ext) {
             if (substr_compare($fileName, ".{$ext}", 0 - (strlen($ext) + 1)) == 0) {
                 return true;
             }
@@ -342,20 +417,20 @@ class Utils
         return false;
     }
 
-    protected static function prepareParamStandard($standard)
+    protected function prepareParamStandard($standard)
     {
-        if (array_key_exists($standard, static::$standardMap)) {
-            $standard = static::$standardMap[$standard];
+        if (array_key_exists($standard, $this->standardMap)) {
+            $standard = $this->standardMap[$standard];
         }
         if (!is_string($standard) || !$standard) {
             return false;
         }
-        $standard = str_ireplace('#VENDOR#', static::getVendorDir(), $standard);
-        $standard = str_ireplace('#SELF#', static::getSelfDir(), $standard);
+        $standard = str_ireplace('#VENDOR#', $this->getVendorDir(), $standard);
+        $standard = str_ireplace('#SELF#', $this->getSelfDir(), $standard);
         return $standard;
     }
 
-    public static function fileStrReplace($fileName, $search, $replace)
+    public function fileStrReplace($fileName, $search, $replace)
     {
         $fileContent = @file_get_contents($fileName);
         if (!is_string($fileContent)) {
@@ -368,7 +443,7 @@ class Utils
         return boolval(@file_put_contents($fileName, $newFileContent));
     }
 
-    public static function exec($cmd, $stdin)
+    public  function exec($cmd, $stdin)
     {
         $result = array('exitcode' => -1, 'stdout' => '', 'stderr' => 'PHP: proc_open error');
         $descriptorspec = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
