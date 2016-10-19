@@ -54,6 +54,22 @@ if ($execResult['exitcode'] != 0) {
     exit(2);
 }
 
+if ($utils->isJshintFile($chkFileName)) {
+    $stdArgv = 'filename';
+    $stdArgvText = $utils->createParamStr($stdArgv, true);
+    $execCmd = "jshint {$stdArgvText} -";
+    $execResult = $utils->exec($execCmd, $output);
+    if ($execResult['exitcode'] != 0) {
+        echo $execResult['stdout'];
+        echo "\n\n";
+        $output = $input;
+        if ($utils->getConfigParam('FILTER_NO_ABORT')) {
+            exit(0);
+        }
+        exit(3);
+    }
+}
+
 if ($output != $input) {
     echo "When added found errors have been fixed in \"{$chkFileName}\"\n";
 }

@@ -118,6 +118,8 @@ class Utils
             $newFile = $this->updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData);
         } elseif (version_compare($customData['VERSION'], '2016.10.17', '<')) {
             $newFile = $this->updateProjectConfigTo20161017($customFile, $simpleFile, $customData, $simpleData);
+        } elseif (version_compare($customData['VERSION'], '2016.10.19', '<')) {
+            $newFile = $this->updateProjectConfigTo20161019($customFile, $simpleFile, $customData, $simpleData);
         }
         if ($newFile) {
             echo "Update config \"{$customFileName}\"\n";
@@ -180,6 +182,19 @@ class Utils
         }
         $ignoreValue = $simpleData['IGNORE'];
         $newFile[] = "IGNORE={$ignoreValue}";
+        return $this->updateProjectConfigTo20161019($newFile, $simpleFile, $customData, $simpleData);
+    }
+
+    protected function updateProjectConfigTo20161019($customFile, $simpleFile, $customData, $simpleData)
+    {
+        $newFile = $customFile;
+        foreach ($newFile as &$line) {
+            if (substr($line, 0, 8) == 'VERSION=') {
+                $line = "VERSION=2016.10.19";
+            }
+        }
+        $jshintValue = $simpleData['JSHINT'];
+        $newFile[] = "JSHINT={$jshintValue}";
         return $newFile;
     }
 
@@ -266,6 +281,13 @@ class Utils
                     $value = $this->getConfigParam('STDIN_PATH');
                     if ($value) {
                         $argv[] = "--stdin-path={$value}";
+                    }
+                    break;
+                case 'filename':
+                    $value = $this->getConfigParam('STDIN_PATH');
+                    if ($value) {
+                        $argv[] = "--filename";
+                        $argv[] = $value;
                     }
                     break;
                 case 'ignore':
@@ -410,6 +432,18 @@ class Utils
     public function isCheckFile($fileName, $php = false)
     {
         foreach ($this->getExtensionsAsArray($php) as $ext) {
+            if (substr_compare($fileName, ".{$ext}", 0 - (strlen($ext) + 1)) == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function isJshintFile($fileName, $php = false)
+    {
+        $extStr = str_replace(' ', '', $this->getConfigParam('JSHINT'));
+        $extList = explode(',', $extStr);
+        foreach ($extList as $ext) {
             if (substr_compare($fileName, ".{$ext}", 0 - (strlen($ext) + 1)) == 0) {
                 return true;
             }

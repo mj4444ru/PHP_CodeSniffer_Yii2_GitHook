@@ -67,6 +67,16 @@ foreach ($checkFileList as $chkFileName => $fileInfo) {
         $hasError = true;
         echo $execResult['stdout'];
     }
+    if ($utils->isJshintFile($chkFileName)) {
+        $stdArgv = 'filename';
+        $stdArgvText = $utils->createParamStr($stdArgv, true);
+        $execCmd = "jshint {$stdArgvText} -";
+        $execResult = $utils->exec($execCmd, $fileInfo['content']);
+        if ($execResult['exitcode'] != 0) {
+            $hasError = true;
+            echo $execResult['stdout'];
+        }
+    }
 }
 if ($hasError) {
     echo "\nFix the error before commit.\n\n";
