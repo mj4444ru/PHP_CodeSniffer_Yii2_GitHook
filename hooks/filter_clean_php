@@ -54,19 +54,36 @@ if ($execResult['exitcode'] != 0) {
     exit(2);
 }
 
-if ($utils->isJshintFile($chkFileName)) {
-    $stdArgv = 'filename';
+if ($utils->isCheckFile($chkFileName, 'jshint')) {
+    $stdArgv = 'filename jshintrc';
     $stdArgvText = $utils->createParamStr($stdArgv, true);
     $execCmd = "jshint {$stdArgvText} -";
-    $execResult = $utils->exec($execCmd, $output);
+    $execResult = $utils->exec($execCmd, $input);
     if ($execResult['exitcode'] != 0) {
         echo $execResult['stdout'];
+        echo $execResult['stderr'];
+        if ($execResult['exitcode'] == 127) {
+            echo "\n  install with: sudo npm install -g jshint";
+        }
         echo "\n\n";
         $output = $input;
         if ($utils->getConfigParam('FILTER_NO_ABORT')) {
             exit(0);
         }
         exit(3);
+    } elseif ($output != $input) {
+        $execResult = $utils->exec($execCmd, $output);
+        if ($execResult['exitcode'] != 0) {
+            echo $execResult['stdout'];
+            echo $execResult['stderr'];
+            echo "\nCheck fails after fixing errors in phpcbf. Errors positions are incorrect!";
+            echo "\n\n";
+            $output = $input;
+            if ($utils->getConfigParam('FILTER_NO_ABORT')) {
+                exit(0);
+            }
+            exit(3);
+        }
     }
 }
 

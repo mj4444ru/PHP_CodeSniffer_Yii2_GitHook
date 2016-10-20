@@ -19,6 +19,7 @@ class Utils
         'FILTER_NO_ABORT' => false,
         'EXTENSIONS' => 'js,css,php,phtml',
         'PHPEXTENSIONS' => 'php,phtml',
+        'JSHINT' => 'js',
     );
 
     protected $configParams = array();
@@ -52,10 +53,10 @@ class Utils
         }
     }
 
-    public function readProjectConfig($configName = '.phpcsgit')
+    public function readProjectConfig()
     {
         $simpleFileName = "{$this->getSelfDir()}/.phpcsgit";
-        $customFileName = "{$this->getProjectDir()}/{$configName}";
+        $customFileName = "{$this->getProjectDir()}/.phpcsgit";
         $simpleData = $this->readProjectConfigToArray($simpleFileName);
         $customData = $this->readProjectConfigToArray($customFileName);
         if ($simpleData && array_key_exists('VERSION', $simpleData)) {
@@ -86,11 +87,18 @@ class Utils
                     $this->setConfigParam($key, $value);
             }
         }
+        if ($this->getConfigParam('JSHINTEXTENSIONS')) {
+            $simpleJshintFileName = "{$this->getSelfDir()}/.jshintrc";
+            $customJshintFileName = "{$this->getProjectDir()}/.jshintrc";
+            if (!file_exists($customJshintFileName)) {
+                $this->installProjectConfig($customJshintFileName, $simpleJshintFileName);
+            }
+        }
     }
 
     protected function installProjectConfig($customFileName, $simpleFileName)
     {
-        echo "Copy config from \"{$simpleFileName}\" to \"{$customFileName}\"\n";
+        echo "Copy config from \"{$simpleFileName}\" to \"{$customFileName}\"\n\n";
         @mkdir(dirname($customFileName), 0777, true);
         @copy($simpleFileName, $customFileName);
     }
@@ -118,11 +126,11 @@ class Utils
             $newFile = $this->updateProjectConfigTo20160920($customFile, $simpleFile, $customData, $simpleData);
         } elseif (version_compare($customData['VERSION'], '2016.10.17', '<')) {
             $newFile = $this->updateProjectConfigTo20161017($customFile, $simpleFile, $customData, $simpleData);
-        } elseif (version_compare($customData['VERSION'], '2016.10.19', '<')) {
-            $newFile = $this->updateProjectConfigTo20161019($customFile, $simpleFile, $customData, $simpleData);
+        } elseif (version_compare($customData['VERSION'], '2016.10.20', '<')) {
+            $newFile = $this->updateProjectConfigTo20161020($customFile, $simpleFile, $customData, $simpleData);
         }
         if ($newFile) {
-            echo "Update config \"{$customFileName}\"\n";
+            echo "\nUpdate config \"{$customFileName}\"\n\n";
             $newFile[] = '';
             if (@file_put_contents($customFileName, implode("\n", $newFile))) {
                 return true;
@@ -182,19 +190,19 @@ class Utils
         }
         $ignoreValue = $simpleData['IGNORE'];
         $newFile[] = "IGNORE={$ignoreValue}";
-        return $this->updateProjectConfigTo20161019($newFile, $simpleFile, $customData, $simpleData);
+        return $this->updateProjectConfigTo20161020($newFile, $simpleFile, $customData, $simpleData);
     }
 
-    protected function updateProjectConfigTo20161019($customFile, $simpleFile, $customData, $simpleData)
+    protected function updateProjectConfigTo20161020($customFile, $simpleFile, $customData, $simpleData)
     {
         $newFile = $customFile;
         foreach ($newFile as &$line) {
             if (substr($line, 0, 8) == 'VERSION=') {
-                $line = "VERSION=2016.10.19";
+                $line = "VERSION=2016.10.20";
             }
         }
-        $jshintValue = $simpleData['JSHINT'];
-        $newFile[] = "JSHINT={$jshintValue}";
+        $jshintValue = $simpleData['JSHINTEXTENSIONS'];
+        $newFile[] = "JSHINTEXTENSIONS={$jshintValue}";
         return $newFile;
     }
 
@@ -286,7 +294,14 @@ class Utils
                 case 'filename':
                     $value = $this->getConfigParam('STDIN_PATH');
                     if ($value) {
-                        $argv[] = "--filename";
+                        $argv[] = '--filename';
+                        $argv[] = $value;
+                    }
+                    break;
+                case 'jshintrc':
+                    $value = "{$this->getProjectDir()}/.jshintrc";
+                    if (is_file($value)) {
+                        $argv[] = '--config';
                         $argv[] = $value;
                     }
                     break;
@@ -365,15 +380,20 @@ class Utils
         return __DIR__;
     }
 
-    public function getExtensions($php = false)
+    public function getExtensions($type = '')
     {
-        return str_replace(' ', '', $this->getConfigParam($php ? 'PHPEXTENSIONS' : 'EXTENSIONS'));
+        $types = array(
+            '' => 'EXTENSIONS',
+            'php' => 'PHPEXTENSIONS',
+            'jshint' => 'JSHINTEXTENSIONS',
+        );
+        return str_replace(' ', '', $this->getConfigParam($types[$type]));
     }
 
-    public function getExtensionsAsArray($php = false)
+    public function getExtensionsAsArray($type = '')
     {
         static $cache = array();
-        $extStr = $this->getExtensions($php);
+        $extStr = $this->getExtensions($type);
         if (!array_key_exists($extStr, $cache)) {
             $extList = explode(',', $extStr);
             foreach ($extList as &$ext) {
@@ -429,21 +449,9 @@ class Utils
         return false;
     }
 
-    public function isCheckFile($fileName, $php = false)
+    public function isCheckFile($fileName, $type = '')
     {
-        foreach ($this->getExtensionsAsArray($php) as $ext) {
-            if (substr_compare($fileName, ".{$ext}", 0 - (strlen($ext) + 1)) == 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public function isJshintFile($fileName, $php = false)
-    {
-        $extStr = str_replace(' ', '', $this->getConfigParam('JSHINT'));
-        $extList = explode(',', $extStr);
-        foreach ($extList as $ext) {
+        foreach ($this->getExtensionsAsArray($type) as $ext) {
             if (substr_compare($fileName, ".{$ext}", 0 - (strlen($ext) + 1)) == 0) {
                 return true;
             }

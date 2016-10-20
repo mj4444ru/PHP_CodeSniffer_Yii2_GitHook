@@ -67,14 +67,18 @@ foreach ($checkFileList as $chkFileName => $fileInfo) {
         $hasError = true;
         echo $execResult['stdout'];
     }
-    if ($utils->isJshintFile($chkFileName)) {
-        $stdArgv = 'filename';
+    if ($utils->isCheckFile($chkFileName, 'jshint')) {
+        $stdArgv = 'filename jshintrc';
         $stdArgvText = $utils->createParamStr($stdArgv, true);
         $execCmd = "jshint {$stdArgvText} -";
         $execResult = $utils->exec($execCmd, $fileInfo['content']);
         if ($execResult['exitcode'] != 0) {
             $hasError = true;
             echo $execResult['stdout'];
+            echo $execResult['stderr'];
+            if ($execResult['exitcode'] == 127) {
+                echo "\ninstall with: sudo npm install -g jshint";
+            }
         }
     }
 }
